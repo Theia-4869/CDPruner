@@ -69,6 +69,7 @@ CUDA_VISIBLE_DEVICES=0 bash scripts/v1_5/eval/mme.sh 64
 For evaluation with the 13B LLM, you just need to replace the `CKPT` argument from `llava-v1.5-7b` to `llava-v1.5-13b` in each script. And for evaluation with LLaVA-NeXT, you can use the scripts in `./scripts/v1_6/eval`. For example, if you want to evaluate CDPruner with 32 * 5 = 320 visual tokens retained on the TextVQA benchmark, you can run the following command:
 ```bash
 CUDA_VISIBLE_DEVICES=0 bash scripts/v1_6/eval/textvqa.sh 32
+```
 
 The detailed guidance for evaluation commands and online submission of each benchmark can be found in [EVAL.md](EVAL.md).
 
