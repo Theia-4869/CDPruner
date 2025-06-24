@@ -137,7 +137,7 @@ class LlavaMetaForCausalLM(ABC):
     def get_vision_tower(self):
         return self.get_model().get_vision_tower()
 
-    # CDPruner
+    # [CDPruner] Generate index masks using conditional DPP
     def encode_images(self, images, texts=None):
         image_features, image_embeds, text_embeds = self.get_model().get_vision_tower()(images, texts=texts)
         
@@ -147,22 +147,26 @@ class LlavaMetaForCausalLM(ABC):
         
         image_features = self.get_model().mm_projector(image_features)
         
-        # CDPruner
+        # [CDPruner] Calculate cosine similarity
         image_normalized = image_features / image_features.norm(dim=-1, keepdim=True) # (B, N, D)
         image_normalized = image_normalized.float() # (B, N, D)
         similarity = torch.matmul(image_normalized, image_normalized.transpose(1, 2)) # (B, N, N)
 
+        # [CDPruner] Calculate query relevance
         image_embeds = image_embeds / image_embeds.norm(dim=-1, keepdim=True) # (B, N, C)
         text_embeds = text_embeds / text_embeds.norm(dim=-1, keepdim=True) # (M, C)
         relevance = torch.matmul(image_embeds, text_embeds.t()) # (B, N, M)
         relevance = (-relevance).mean(dim=-1) # (B, N)
         relevance = (relevance - relevance.min() + 1e-6) / (relevance.max() - relevance.min()) # (B, N)
 
+        # [CDPruner] Construct kernel matrix
+        # You can use an additional hyperparameter theta to control the influence of the relevance score.
         # theta = 0.5
         # alpha = theta / (2 * (1 - theta))
         # relevance = torch.exp(alpha * relevance) # (B, N)
         kernel = relevance.unsqueeze(2) * similarity * relevance.unsqueeze(1) # (B, N, N)
 
+        # [CDPruner] Fast MAP inference of conditional DPP
         cis = torch.zeros((self.visual_token_num, B, N), device=device) # (T, B, N)
         di2s = torch.diagonal(kernel, dim1=1, dim2=2).clone() # (B, N)
         select_idx = torch.empty((self.visual_token_num, B), dtype=torch.long, device=device) # (T, B)
@@ -182,7 +186,7 @@ class LlavaMetaForCausalLM(ABC):
         
         return image_features, index_masks
 
-    # CDPruner
+    # [CDPruner] Prune visual tokens according to index masks
     def prepare_inputs_labels_for_multimodal(
         self, input_ids, position_ids, attention_mask, past_key_values, labels,
         images, image_sizes=None, texts=None
@@ -191,7 +195,7 @@ class LlavaMetaForCausalLM(ABC):
         if vision_tower is None or images is None or input_ids.shape[1] == 1:
             return input_ids, position_ids, attention_mask, past_key_values, None, labels
 
-        # CDPruner
+        # [CDPruner] Prune visual tokens
         if type(images) is list or images.ndim == 5:
             if type(images) is list:
                 images = [x.unsqueeze(0) if x.ndim == 3 else x for x in images]

@@ -48,13 +48,13 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-        # CDPruner
+        # [CDPruner] Visual token pruning config
         self.visual_token_num = visual_token_num
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    # CDPruner
+    # [CDPruner] Visual token number
     def get_visual_token_num(self):
         return self.visual_token_num
 
