@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="Beyond Attention or Similarity: Maximizing Conditional Diversity for Token Pruning in MLLMs">
+  <meta name="keywords" content="vision language model, visual token pruning, training-free acceleration, inference efficiency">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VisPruner</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <link rel="icon" href="./static/image/icon.png">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/js/all.min.js"></script>
+  <script type="module" src="https://gradio.s3-us-west-2.amazonaws.com/4.8.0/gradio.js"></script>
+</head>
+
+<style>
+  .expandable-card .card-text-container {
+    max-height: 200px;
+    overflow-y: hidden;
+    position: relative;
+  }
+
+  .expandable-card.expanded .card-text-container {
+    max-height: none;
+  }
+
+  .expand-btn {
+    position: relative;
+    display: none;
+    background-color: rgba(255, 255, 255, 0.8);
+    /* margin-top: -20px; */
+    /* justify-content: center; */
+    color: #510c75;
+    border-color: transparent;
+  }
+
+  .expand-btn:hover {
+    background-color: rgba(200, 200, 200, 0.8);
+    text-decoration: none;
+    border-color: transparent;
+    color: #510c75;
+  }
+
+  .expand-btn:focus {
+    outline: none;
+    text-decoration: none;
+  }
+
+  .expandable-card:not(.expanded) .card-text-container:after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 90px;
+    background: linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 1));
+  }
+
+  .expandable-card:not(.expanded) .expand-btn {
+    margin-top: -40px;
+  }
+
+  .card-body {
+    padding-bottom: 5px;
+  }
+
+  .vertical-flex-layout {
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .figure-img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .adjustable-font-size {
+    font-size: calc(0.5rem + 2vw);
+  }
+
+  .chat-history {
+    flex-grow: 1;
+    overflow-y: auto;
+    /* overflow-x: hidden; */
+    padding: 5px;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 10px;
+  }
+
+  #gradio pre {
+    background-color: transparent;
+  }
+
+.author-block a {
+    color: #008AD7;
+    font-weight: normal;
+}
+
+/* Adjust the vertical alignment and font size of the superscript */
+.author-block a sup {
+    vertical-align: baseline;
+    position: relative;
+    top: -0.3em; /* Adjusts the position slightly above the baseline */
+    right: -0.1em; /* Adjusts the position slightly to the right */
+    font-size: smaller; /* Makes the font size smaller if needed */
+}
+
+</style>
+
+<body>
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-2 publication-title"><font color="#FF0000"></font> 💽 CDPruner<span class="is-size-2"><span class="is-size-1"></span></h1>
+            <h3 class="title is-3 publication-title">Beyond Attention or Similarity: Maximizing Conditional<br> Diversity for Token Pruning in MLLMs </h3>
+            <div class="is-size-4 publication-authors">
+
+              <span class="author-block">
+                <a href="https://theia4869.com/">Qizhe Zhang<sup>1,2</sup></a>,
+              </span>
+
+              <span class="author-block">
+				<a href="https://github.com/lmzpai">Mengzhen Liu<sup>1</sup></a>,
+              </span>
+
+              <span class="author-block">
+				<a href="https://github.com/LichenLillc">Lichen Li<sup>1</sup></a>,
+              </span>
+
+              <span class="author-block">
+                <a href="https://lu-m13.github.io/">Ming Lu<sup>1</sup></a>,
+              </span>
+			
+            </div>
+			  
+			<div class="is-size-4 publication-authors">
+
+              <span class="author-block">
+                <a href="https://yuanzhang.cc/">Yuan Zhang<sup>1</sup></a>,
+              </span>
+			  
+			  <span class="author-block">
+			    <a href="https://scholar.google.com/citations?user=YvgX3sUAAAAJ">Junwen Pan<sup>2</sup></a>,
+			  </span>
+			  
+			  <span class="author-block">
+			    <a href="https://qi-she.net/">Qi She<sup>2</sup></a>,
+			  </span>
+
+              <span class="author-block">
+                <a href="https://www.shanghangzhang.com/">Shanghang Zhang<sup>1,&#9993;</sup></a>
+              </span>
+
+            </div>
+
+            <div class="is-size-5 publication-authors">
+              <span class="author-block"><sup>&#9993;</sup>Corresponding Author</span>
+            </div>
+
+            <div class="is-size-5 publication-authors">
+			  <span class="author-block">
+				<sup>1</sup> School of Computer Science, Peking University
+			  </span>
+			</div>
+			
+			<div class="is-size-5 publication-authors">
+			  <span class="author-block">
+				<sup>2</sup> ByteDance
+			  </span>
+            </div>
+
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                <span class="link-block">
+                  <a href="https://arxiv.org/abs/2506.10967" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="ai ai-arxiv"></i>
+                    </span>
+                    <span>Paper</span>
+                  </a>
+                </span>
+                <span class="link-block">
+                  <a href="https://github.com/Theia-4869/CDPruner" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-github"></i>
+                    </span>
+                    <span>Code</span>
+                  </a>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- <section class="section"  style="background-color:#efeff081">
+    <div class="container is-max-desktop" id="gradio">
+      <gradio-app src="https://vip-llava-2.hliu.cc"></gradio-app>
+    </div>
+  </section> -->
+
+  <section class="section" style="background-color:#efeff081">
+    <div class="container is-max-desktop">
+      <!-- Abstract -->
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-six-fifths">
+          <h2 class="title is-3">Abstract</h2>
+          <div class="content has-text-justified">
+            <p>
+			  In multimodal large language models (MLLMs), the length of input visual tokens is often significantly greater than that 
+			  of their textual counterparts, leading to a high inference cost. Many works aim to address this issue by removing redundant 
+			  visual tokens. However, current approaches either rely on attention-based pruning, which retains numerous duplicate tokens, 
+			  or use similarity-based pruning, overlooking the instruction relevance, consequently causing suboptimal performance. In 
+			  this paper, we go beyond attention or similarity by proposing a novel visual token pruning method named <b>CDPruner</b>, 
+			  which maximizes the conditional diversity of retained tokens. We first define the conditional similarity between visual 
+			  tokens conditioned on the instruction, and then reformulate the token pruning problem with determinantal point process (DPP) 
+			  to maximize the conditional diversity of the selected subset. The proposed CDPruner is training-free and model-agnostic, 
+			  allowing easy application to various MLLMs. Extensive experiments across diverse MLLMs show that CDPruner establishes new 
+			  state-of-the-art on various vision-language benchmarks. By maximizing conditional diversity through DPP, the selected subset 
+			  better represents the input images while closely adhering to user instructions, thereby preserving strong performance even 
+			  with high reduction ratios. When applied to LLaVA, CDPruner reduces FLOPs by 95% and CUDA latency by 78%, while maintaining 
+			  94% of the original accuracy. Our code is available at <a href="https://github.com/Theia-4869/CDPruner">https://github.com/Theia-4869/CDPruner</a>.
+           </p>
+          </div>
+			<centering>
+				<div style="text-align: center;">
+				  <img id="teaser" width="100%" src="static/image/case.png">
+				</div>
+			</centering>
+        </div>
+      </div>
+        
+    </div>
+  </section>
+
+	<section class="section">
+		<!-- Maximizing Conditional Diversity for Token Pruning -->
+		<div class="columns is-centered has-text-centered">
+			<div class="column is-six-fifths">
+				<h2 class="title is-3">Maximizing Conditional Diversity for Token Pruning</h2>
+			</div>
+		</div>
+		
+		<div class="container is-max-desktop">
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<div class="content has-text-justified">
+				
+						<p>
+							Attention-based methods retain numerous <b>duplicate tokens</b>, failing to achieve effective visual token compression. 
+							Similarity-based methods <b>neglect user instructions</b>, always pruning the same tokens and paying insufficient 
+							attention to relevant regions. Our CDPruner considers the <b>conditional diversity</b> of the selected subset, 
+							dynamically adjusting pruning according to the user instructions and retaining maximal visual information. 
+						</p>
+
+					</div>
+				</div>
+			</div>
+			
+			<div class="columns is-centered has-text-centered">
+				<div class="column is-six-fifths">
+					<h3 class="title is-4">Instruction Relevance</h3>
+				</div>
+			</div>
+			
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<div class="content has-text-justified"> 
+						<p>
+							We introduce instruction relevance as a condition to achieve dynamic pruning, which is calculated as the <b>cosine 
+							similarity</b> between each visual token and the user instruction. The visualization of relevance scores is shown as follows:
+						</p>
+					</div>
+					<centering>
+						<div style="text-align: center;">
+							<img id="teaser" width="100%" src="static/image/relevance.png">     
+						</div>
+					</centering>
+				</div>
+			</div>
+			
+			<div class="columns is-centered has-text-centered">
+				<div class="column is-six-fifths">
+					<h3 class="title is-4">Conditional DPP</h3>
+				</div>
+			</div>
+
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<div class="content has-text-justified"> 
+						<p>
+							We first calculate the <b>similarity</b> between visual tokens conditioned on their <b>relevance</b> to the current 
+							instruction. Then, <b>CDPruner</b> uses a DPP to select the subset to keep. As a training-free and model-agnostic method, 
+							it ensures both the <b>diversity</b> and <b>quality</b> of the selected token subset, significantly reducing computational 
+							cost while maintaining considerable performance.
+						</p>
+					</div>
+					<centering>
+						<div style="text-align: center;">
+							<img id="teaser" width="100%" src="static/image/pipeline.png">
+						</div>
+					</centering>
+				</div>
+			</div>
+		
+		</div>
+	</section>
+	
+	<section class="section">
+		<!-- Performance Comparison -->
+		<div class="columns is-centered has-text-centered">
+			<div class="column is-six-fifths">
+				<h2 class="title is-3">Performance Comparison</h2>
+			</div>
+		</div>
+		
+		<div class="container is-max-desktop">
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<div class="content has-text-justified">
+						<p>
+							We validate <b>CDPruner</b> against <b>different types</b> of existing methods across <b>various MLLM architectures</b> on 
+							comprehensive multi-modal benchmarks, including <b>general VQA</b>, <b>text-oriented VQA</b> and <b>video understanding</b> tasks.
+						</p>
+					</div>
+				</div>
+			</div>
+			
+			<div class="columns is-centered has-text-centered">
+				<div class="column is-six-fifths">
+					<h3 class="title is-4">LLaVA-1.5-7B</h3>
+				</div>
+			</div>
+			
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<centering>
+						<div style="text-align: center;">
+							<img id="teaser" width="100%" src="static/image/llava-1.5-7b.png">     
+						</div>
+					</centering>
+				</div>
+			</div>
+			
+			<div class="columns is-centered has-text-centered">
+				<div class="column is-six-fifths">
+					<h3 class="title is-4">LLaVA-1.5-13B</h3>
+				</div>
+			</div>
+			
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<centering>
+						<div style="text-align: center;">
+							<img id="teaser" width="100%" src="static/image/llava-1.5-13b.png">     
+						</div>
+					</centering>
+				</div>
+			</div>
+			
+			<div class="columns is-centered has-text-centered">
+				<div class="column is-six-fifths">
+					<h3 class="title is-4">LLaVA-NeXT-7B</h3>
+				</div>
+			</div>
+			
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<centering>
+						<div style="text-align: center;">
+							<img id="teaser" width="100%" src="static/image/llava-next-7b.png">     
+						</div>
+					</centering>
+				</div>
+			</div>
+			
+			<div class="columns is-centered has-text-centered">
+				<div class="column is-six-fifths">
+					<h3 class="title is-4">LLaVA-NeXT-13B</h3>
+				</div>
+			</div>
+			
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<centering>
+						<div style="text-align: center;">
+							<img id="teaser" width="100%" src="static/image/llava-next-13b.png">     
+						</div>
+					</centering>
+				</div>
+			</div>
+			
+			<div class="columns is-centered has-text-centered">
+				<div class="column is-six-fifths">
+					<h3 class="title is-4">LLaVA-Video-7B</h3>
+				</div>
+			</div>
+			
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<centering>
+						<div style="text-align: center;">
+							<img id="teaser" width="100%" src="static/image/llava-video-7b.png">     
+						</div>
+					</centering>
+				</div>
+			</div>
+			
+			<div class="columns is-centered has-text-centered">
+				<div class="column is-six-fifths">
+					<h3 class="title is-4">Qwen2.5-VL-7B</h3>
+				</div>
+			</div>
+			
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<centering>
+						<div style="text-align: center;">
+							<img id="teaser" width="100%" src="static/image/qwen2.5-vl-7b.png">     
+						</div>
+					</centering>
+				</div>
+			</div>
+		
+		</div>
+	</section>
+	
+	<section class="section">
+		<!-- Efficiency Comparison -->
+		<div class="columns is-centered has-text-centered">
+			<div class="column is-six-fifths">
+				<h2 class="title is-3">Efficiency Comparison</h2>
+			</div>
+		</div>
+		
+		<div class="container is-max-desktop">
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<div class="content has-text-justified">
+						<p>
+							To demonstrate the efficiency of CDPruner, we conduct a comparative analysis against other pruning methods in terms 
+							of <b>FLOPs, CUDA latency, KV cache, and GPU memory</b> on the high-resolution MLLM LLaVA-NeXT. All experiments are 
+							performed on a single NVIDIA A100-80GB GPU.
+						</p>
+					</div>
+				</div>
+			</div>
+			
+			<div class="columns is-centered has-text-centered">
+				<div class="column is-six-fifths">
+					<h3 class="title is-4">LLaVA-NeXT-7B</h3>
+				</div>
+			</div>
+			
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<centering>
+						<div style="text-align: center;">
+							<img id="teaser" width="75%" src="static/image/efficiency-7b.png">     
+						</div>
+					</centering>
+				</div>
+			</div>
+			
+			<div class="columns is-centered has-text-centered">
+				<div class="column is-six-fifths">
+					<h3 class="title is-4">LLaVA-NeXT-13B</h3>
+				</div>
+			</div>
+			
+			<div class="columns is-centered">
+				<div class="column is-full-width">
+					<centering>
+						<div style="text-align: center;">
+							<img id="teaser" width="75%" src="static/image/efficiency-13b.png">     
+						</div>
+					</centering>
+				</div>
+			</div>
+		
+		</div>
+	</section>
+	<section class="section" id="Contact">
+	  <div class="container is-max-desktop content">
+	    <h2 class="title">Contact</h2>
+			<p>
+				If you have any questions, please feel free to contact us:
+			</p>
+			<ul style="list-style-type: none; padding: 0; margin-left: 50px">
+				<li><span style="font-weight: bold;">Qizhe Zhang: </span><span><a href="mailto:theia@pku.edu.cn">theia@pku.edu.cn</a></span></li>
+				<li><span style="font-weight: bold;">Shanghang Zhang: </span><span><a href="mailto:shanghang@pku.edu.cn">shanghang@pku.edu.cn</a></span></li>
+			</ul>
+	  </div>
+	</section>
+
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+        <pre><code>
+@article{zhang2025cdpruner,
+  title={Beyond Attention or Similarity: Maximizing Conditional Diversity for Token Pruning in MLLMs},
+  author={Zhang, Qizhe and Liu, Mengzhen and Li, Lichen and Lu, Ming and Zhang, Yuan and Pan, Junwen and She, Qi and Zhang, Shanghang},
+  journal={arXiv preprint arXiv:2506.10967},
+  year={2025}
+}
+		</code></pre>
+    </div>
+  </section>
+
+</body>
+
+</html>
