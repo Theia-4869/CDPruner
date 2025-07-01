@@ -4,6 +4,10 @@
 
 [📄 [Paper](https://arxiv.org/abs/2506.10967)] [🌐 [Project Page](https://theia4869.com/CDPruner)]
 
+## 📰 News
+
+🔥 **[2025/06/29]** Our [Project Page](https://theia4869.com/CDPruner) is updated!
+
 ## 👁️ Overview
 
 Abundant efforts have been made to reduce the inference cost of MLLMs by pruning visual tokens, and existing methods can be roughly divided into two categories. The first is to identify visual tokens with high attention scores as important and discard those deemed less critical, which only considers the importance of visual tokens, resulting in **a large number of duplicate tokens** being retained. The second is to remove redundant parts based on feature similarity between visual tokens, which neglects user instructions, **failing to achieve dynamic pruning** in alignment with the current question. CDPruner considers the conditional diversity of the selected subset, dynamically adjusting pruning according to the user instructions and retaining maximal visual information.
