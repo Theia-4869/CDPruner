@@ -37,6 +37,7 @@ class CLIPVisionTower(nn.Module):
 
     # [CDPruner] Load text tower for CLIP model
     def load_text_tower(self, device_map=None):
+        CLIPVisionModelWithProjection._no_split_modules = ['CLIPEncoderLayer']
         vision_tower_with_projection = CLIPVisionModelWithProjection.from_pretrained(self.vision_tower_name, device_map=device_map)
         self.vision_tower.visual_projection = vision_tower_with_projection.visual_projection
 
@@ -72,7 +73,8 @@ class CLIPVisionTower(nn.Module):
             
             with torch.cuda.stream(image_stream):
                 image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
-                image_features = self.feature_select(image_forward_outs).to(images.dtype)
+                image_outputs = self.feature_select(image_forward_outs)
+                image_features = image_outputs.to(images.dtype)
             
             if texts is not None:
                 with torch.cuda.stream(text_stream):
