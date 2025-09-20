@@ -6,6 +6,8 @@
 
 ## 📰 News
 
+🔥 **[2025/09/18]** Our [CDPruner](https://arxiv.org/abs/2506.10967) is accepted by NeurIPS 2025! 🎉
+
 🔥 **[2025/06/29]** Our [Project Page](https://theia4869.com/CDPruner) is updated!
 
 ## 👁️ Overview
